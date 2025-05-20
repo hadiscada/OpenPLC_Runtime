@@ -11,7 +11,7 @@ The OpenPLC Project consists of two sub-projects:
 
 ## Installation:
 ```bash
-git clone https://github.com/thiagoralves/OpenPLC_v3.git
+git clone https://github.com/hadiscada/OpenPLC_Runtime.git
 cd OpenPLC_v3
 ./install.sh [platform]
 ```
