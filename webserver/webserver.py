@@ -14,12 +14,43 @@ import sys
 import ctypes
 import socket
 import mimetypes
+import uuid  
 
+from functools import wraps
 import flask 
 import flask_login
+from flask import jsonify, request, session
+import secrets
 
+print("Starting OpenPLC Runtime webserver - webserver.py loaded")
+
+# Konfigurasi Flask seperti kode lama
 app = flask.Flask(__name__)
-app.secret_key = str(os.urandom(16))
+app.secret_key = str(os.urandom(16))  # Secret key acak seperti kode lama
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
+
+openplc_runtime = openplc.runtime()
+
+class User(flask_login.UserMixin):
+    pass
+
+def init_api_keys_table():
+    conn = sqlite3.connect("openplc.db")
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ApiKeys (
+            api_key TEXT PRIMARY KEY,
+            user_id TEXT,
+            created_at INTEGER
+        )
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+init_api_keys_table()
+
+
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 
@@ -57,6 +88,377 @@ def is_allowed_file(file):
         return False
     except Exception:
         return False
+
+
+# Decorator for API key authentication
+def require_api_key(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = flask.request.headers.get('X-API-Key')
+        database = "openplc.db"
+        conn = create_connection(database)
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT user_id FROM ApiKeys WHERE api_key = ?", (api_key,))
+                row = cur.fetchone()
+                cur.close()
+                conn.close()
+                if row:
+                    return f(*args, **kwargs)
+                else:
+                    return flask.jsonify({"success": False, "error": "Unauthorized: Invalid or missing API key"}), 401
+            except Error as e:
+                print("error checking API key: " + str(e))
+                return flask.jsonify({"success": False, "error": "Database error"}), 500
+        else:
+            return flask.jsonify({"success": False, "error": "Error connecting to database"}), 500
+    return decorated
+
+
+# REST API Endpoints
+@app.route('/api/ping', methods=['GET'])
+@require_api_key
+def api_ping():
+    return flask.jsonify({"message": "OpenPLC Runtime is reachable"}), 200
+
+@app.route('/api/login', methods=['POST'])
+def apilogin():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    session_id = str(uuid.uuid4())  # Generate a unique session ID
+    #print(f'Login Request: {data}, Session ID: {session_id}')
+    #print(f'Cookies received: {request.cookies}')
+    #print(f'Session before login: {dict(session)}')
+    if username == 'openplc' and password == 'openplc':
+        session['authenticated'] = True
+        session['session_id'] = session_id  # Store session ID
+        session.permanent = True
+        session.modified = True
+        #print(f'Session after login: {dict(session)}')
+        response = jsonify({
+            "success": True,
+            "message": "Login successful",
+            "session_id": session_id
+        })
+        #print(f'Login Response headers: {response.headers}')
+        return response, 200
+    else:
+        return jsonify({
+            "success": False,
+            "message": "Invalid username or password"
+        }), 401
+
+# Updated /api/status endpoint (from previous response)
+@app.route('/api/status', methods=['GET'])
+@require_api_key
+def api_status():
+    try:
+        status = openplc_runtime.status()
+        modbus_enabled = False
+        active_protocols = []
+        database = "openplc.db"
+        conn = create_connection(database)
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT Key, Value FROM Settings")
+                rows = cur.fetchall()
+                cur.close()
+                conn.close()
+                for row in rows:
+                    if row[0] == "Modbus_port" and row[1] != "disabled":
+                        modbus_enabled = True
+                        active_protocols.append({"protocol": "Modbus", "port": row[1]})
+                    elif row[0] == "Dnp3_port" and row[1] != "disabled":
+                        active_protocols.append({"protocol": "DNP3", "port": row[1]})
+                    elif row[0] == "Enip_port" and row[1] != "disabled":
+                        active_protocols.append({"protocol": "EtherNet/IP", "port": row[1]})
+                    elif row[0] == "snap7" and row[1] != "false":
+                        active_protocols.append({"protocol": "S7", "port": "N/A"})
+            except Error as e:
+                print("error retrieving settings: " + str(e))
+                return jsonify({"success": False, "error": "Database error retrieving settings"}), 500
+        else:
+            return jsonify({"success": False, "error": "Error connecting to database"}), 500
+
+        response = {
+            "success": True,
+            "status": status,
+            "project_name": openplc_runtime.project_name,
+            "project_description": openplc_runtime.project_description,
+            "project_file": openplc_runtime.project_file,
+            "execution_time": openplc_runtime.exec_time(),
+            "modbus_enabled": modbus_enabled,
+            "active_protocols": active_protocols
+        }
+        return jsonify(response), 200
+    except Exception as e:
+        print("error retrieving status: " + str(e))
+        return jsonify({"success": False, "error": "Failed to retrieve status: " + str(e)}), 500
+
+# Fixed /api/generate-key endpoint
+@app.route('/api/generate-key', methods=['GET', 'POST'])
+def generate_key():
+    session_id = session.get('session_id', 'none')
+    if session.get('authenticated'):
+        # Generate a UUID-based API key to match the ApiKeys table format
+        api_key = str(uuid.uuid4())
+        user_id = "openplc"  # Default user_id, adjust if you have multiple users
+        created_at = int(time.time())
+        
+        # Store the API key in the ApiKeys table
+        database = "openplc.db"
+        conn = create_connection(database)
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO ApiKeys (api_key, user_id, created_at) VALUES (?, ?, ?)",
+                            (api_key, user_id, created_at))
+                conn.commit()
+                cur.close()
+                conn.close()
+                print(f"Generated and stored API key: {api_key}")
+                return jsonify({
+                    "success": True,
+                    "api_key": api_key
+                }), 200
+            except Error as e:
+                print("error storing API key: " + str(e))
+                return jsonify({
+                    "success": False,
+                    "message": "Database error storing API key"
+                }), 500
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Error connecting to database"
+            }), 500
+    else:
+        return jsonify({
+            "success": False,
+            "message": "Unauthorized"
+        }), 401
+
+# Endpoint /api/start yang diperbarui
+@app.route('/api/start', methods=['POST'])
+def api_start_plc():
+    session_id = session.get('session_id', 'none')
+    if session.get('authenticated'):
+        monitor.stop_monitor()
+        openplc_runtime.start_runtime()
+        time.sleep(1)
+        configure_runtime()
+        monitor.cleanup()
+        monitor.parse_st(openplc_runtime.project_file)
+        response = jsonify({"success": True, "message": "PLC started successfully"})
+        return response, 200
+
+    api_key = flask.request.headers.get('X-API-Key')
+    database = "openplc.db"
+    conn = create_connection(database)
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT user_id FROM ApiKeys WHERE api_key = ?", (api_key,))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                monitor.stop_monitor()
+                openplc_runtime.start_runtime()
+                time.sleep(1)
+                configure_runtime()
+                monitor.cleanup()
+                monitor.parse_st(openplc_runtime.project_file)
+                response = jsonify({"success": True, "message": "PLC started successfully"})
+                return response, 200
+            else:
+                response = jsonify({"success": False, "message": "Unauthorized: Invalid or missing API key or session"})
+                return response, 401
+        except Error as e:
+            response = jsonify({"error": "Database error"})
+            return response, 500
+    else:
+        response = jsonify({"error": "Error connecting to database"})
+        return response, 500
+
+# Endpoint /api/stop yang diperbarui
+@app.route('/api/stop', methods=['POST'])
+def api_stop_plc():
+    session_id = session.get('session_id', 'none')
+    if session.get('authenticated'):
+        openplc_runtime.stop_runtime()
+        time.sleep(1)
+        monitor.stop_monitor()
+        response = jsonify({"success": True, "message": "PLC stopped successfully"})
+        print(f'Stop PLC Response headers: {response.headers}')
+        return response, 200
+
+    api_key = flask.request.headers.get('X-API-Key')
+    database = "openplc.db"
+    conn = create_connection(database)
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT user_id FROM ApiKeys WHERE api_key = ?", (api_key,))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                openplc_runtime.stop_runtime()
+                time.sleep(1)
+                monitor.stop_monitor()
+                response = jsonify({"success": True, "message": "PLC stopped successfully"})
+                return response, 200
+            else:
+                response = jsonify({"success": False, "message": "Unauthorized: Invalid or missing API key or session"})
+                return response, 401
+        except Error as e:
+            response = jsonify({"error": "Database error"})
+            return response, 500
+    else:
+        response = jsonify({"error": "Error connecting to database"})
+        return response, 500
+
+@app.route('/api/upload', methods=['POST'])
+@require_api_key
+def api_upload_program():
+    if 'file' not in request.files:
+        return jsonify({"success": False, "error": "No file provided"}), 400
+    prog_file = request.files['file']
+    if prog_file.filename == '':
+        return jsonify({"success": False, "error": "No file selected"}), 400
+    if not prog_file.filename.endswith('.st'):
+        return jsonify({"success": False, "error": "Invalid file format. Only .st files are allowed"}), 400
+
+    filename = str(random.randint(1, 1000000)) + ".st"
+    prog_file.save(os.path.join('st_files', filename))
+
+    database = "openplc.db"
+    conn = create_connection(database)
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("INSERT INTO Programs (Name, Description, File, Date_upload) VALUES (?, ?, ?, ?)",
+                        (filename, "Uploaded via API", filename, int(time.time())))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return jsonify({"success": True, "message": "File uploaded successfully", "filename": filename}), 200
+        except Error as e:
+            print("error connecting to the database: " + str(e))
+            return jsonify({"success": False, "error": "Database error: " + str(e)}), 500
+    else:
+        return jsonify({"success": False, "error": "Error connecting to database"}), 500
+
+@app.route('/api/compile', methods=['POST'])
+@require_api_key
+def api_compile_program():
+    data = request.get_json()
+    if not data or 'filename' not in data:
+        return jsonify({"success": False, "error": "Filename is required"}), 400
+
+    filename = data['filename']
+    if not filename.endswith('.st'):
+        return jsonify({"success": False, "error": "Invalid filename. Must be a .st file"}), 400
+    file_path = os.path.join('st_files', filename)
+    if not os.path.exists(file_path):
+        return jsonify({"success": False, "error": "File not found"}), 404
+
+    if openplc_runtime.status() == "Compiling":
+        return jsonify({"success": False, "error": "Another compilation is in progress"}), 409
+
+    openplc_runtime.project_file = filename
+    openplc_runtime.project_name = filename
+    openplc_runtime.project_description = "Compiled via API"
+    with open("active_program", "w") as f:
+        f.write(filename)
+
+    database = "openplc.db"
+    conn = create_connection(database)
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM Programs WHERE File=?", (filename,))
+            row = cur.fetchone()
+            if row:
+                openplc_runtime.project_name = str(row[1])
+                openplc_runtime.project_description = str(row[2])
+            cur.close()
+            conn.close()
+        except Error as e:
+            print("error connecting to the database: " + str(e))
+
+    openplc_runtime.compile_program(filename)
+    time.sleep(1)  # Wait for compilation to start
+    return jsonify({"success": True, "message": "Compilation started", "filename": filename}), 202
+
+@app.route('/api/compilation-logs', methods=['GET'])
+@require_api_key
+def api_compilation_logs():
+    try:
+        logs = openplc_runtime.compilation_status()
+        status = "running"
+        if "Compilation finished successfully!" in logs:
+            status = "success"
+        elif "Compilation finished with errors!" in logs:
+            status = "error"
+        return jsonify({
+            "success": True,
+            "message": "Compilation status retrieved",
+            "status": status,
+            "logs": logs
+        }), 200
+    except Exception as e:
+        print("error retrieving compilation logs: " + str(e))
+        return jsonify({"success": False, "error": "Failed to retrieve compilation status: " + str(e)}), 500
+
+# Endpoint /api/logs yang diperbarui
+@app.route('/api/logs', methods=['GET'])
+def api_runtime_logs():
+    session_id = session.get('session_id', 'none')
+    if session.get('authenticated'):
+        try:
+            logs = openplc_runtime.logs()
+            response = jsonify({"success": True, "logs": logs})
+            return response, 200
+        except Exception as e:
+            print("error retrieving runtime logs: " + str(e))
+            response = jsonify({"success": False, "message": "Failed to retrieve logs: " + str(e)})
+            print(f'Logs Response headers: {response.headers}')
+            return response, 500
+
+    api_key = flask.request.headers.get('X-API-Key')
+    database = "openplc.db"
+    conn = create_connection(database)
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT user_id FROM ApiKeys WHERE api_key = ?", (api_key,))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                try:
+                    logs = openplc_runtime.logs()
+                    response = jsonify({"success": True, "logs": logs})
+                    return response, 200
+                except Exception as e:
+                    response = jsonify({"success": False, "message": "Failed to retrieve logs: " + str(e)})
+                    return response, 500
+            else:
+                response = jsonify({"success": False, "message": "Unauthorized: Invalid or missing API key or session"})
+                return response, 401
+        except Error as e:
+            response = jsonify({"error": "Database error"})
+            return response, 500
+    else:
+        response = jsonify({"error": "Error connecting to database"})
+        return response, 500
+    
 
 def configure_runtime():
     global openplc_runtime
@@ -452,6 +854,7 @@ def before_request():
     app.permanent_session_lifetime = datetime.timedelta(minutes=5)
     flask.session.modified = True
         
+
 @app.route('/')
 def index():
     if flask_login.current_user.is_authenticated:
@@ -464,10 +867,9 @@ def index():
 def login():
     if flask.request.method == 'GET':
         return pages.login_head + pages.login_body
-
     username = flask.request.form['username']
     password = flask.request.form['password']
-    
+    print(f"Login attempt: username={username}, password={password}")
     database = "openplc.db"
     conn = create_connection(database)
     if (conn != None):
@@ -475,9 +877,9 @@ def login():
             cur = conn.cursor()
             cur.execute("SELECT username, password, name, pict_file FROM Users")
             rows = cur.fetchall()
+            print(f"Users table: {rows}")
             cur.close()
             conn.close()
-
             for row in rows:
                 if (row[0] == username):
                     if (row[1] == password):
@@ -486,19 +888,19 @@ def login():
                         user.name = row[2]
                         user.pict_file = str(row[3])
                         flask_login.login_user(user)
+                        print(f"Login successful, session: {dict(session)}")
                         return flask.redirect(flask.url_for('dashboard'))
                     else:
+                        print("Password tidak cocok")
                         return pages.login_head + pages.bad_login_body
-                        
+            print("Username tidak ditemukan")
             return pages.login_head + pages.bad_login_body
-                    
         except Error as e:
-            print("error connecting to the database" + str(e))
+            print("Error database: " + str(e))
             return 'Error opening DB'
     else:
+        print("Gagal koneksi ke database")
         return 'Error opening DB'
-
-    return pages.login_head + pages.bad_login_body
 
 
 @app.route('/start_plc')
@@ -540,6 +942,7 @@ def runtime_logs():
 @app.route('/dashboard')
 def dashboard():
     global openplc_runtime
+    print(f"Akses dashboard: is_authenticated={flask_login.current_user.is_authenticated}, session={dict(session)}")
     if (flask_login.current_user.is_authenticated == False):
         return flask.redirect(flask.url_for('login'))
     else:
@@ -573,14 +976,11 @@ def dashboard():
             return_str += "<font color = '#02CC07'>Running</font></b></p>"
         else:
             return_str += "<font color = 'Red'>Stopped</font></b></p>"
-            
         return_str += "<p style='font-family:'Roboto', sans-serif; font-size:16px'><b>Program:</b> " + openplc_runtime.project_name + "</p>"
         return_str += "<p style='font-family:'Roboto', sans-serif; font-size:16px'><b>Description:</b> " + openplc_runtime.project_description + "</p>"
         return_str += "<p style='font-family:'Roboto', sans-serif; font-size:16px'><b>File:</b> " + openplc_runtime.project_file + "</p>"
         return_str += "<p style='font-family:'Roboto', sans-serif; font-size:16px'><b>Runtime:</b> " + openplc_runtime.exec_time() + "</p>"
-        
         return_str += pages.dashboard_tail
-        
         return return_str
 
 
@@ -2527,7 +2927,9 @@ if __name__ == '__main__':
                 configure_runtime()
                 monitor.parse_st(openplc_runtime.project_file)
             
-            app.run(debug=False, host='0.0.0.0', threaded=True, port=8080)
+            init_api_keys_table()
+
+            app.run(debug=True, host='0.0.0.0', threaded=True, port=8080)
         
         except Error as e:
             print("error connecting to the database" + str(e))

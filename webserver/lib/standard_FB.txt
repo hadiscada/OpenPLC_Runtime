@@ -44,6 +44,8 @@
 (* Not in the standard, but useful nonetheless. *)
 {#include "sema.txt" }
 {#include "communication_blocks.txt" }
+{#include "modbus_tcp.txt" }
+{#include "s7.txt" }
 {#include "sm_cards.txt" }
 {#include "SL-RP4.txt" }
 

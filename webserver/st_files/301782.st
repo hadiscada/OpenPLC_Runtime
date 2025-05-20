@@ -1,0 +1,58 @@
+PROGRAM main
+  VAR
+    MODBUS_CONNECT0 : MODBUS_CONNECT;
+    ip : STRING := '192.168.1.10';
+    slave : UINT := 1;
+    port : UINT := 502;
+    MODBUS_READ_HOLDING0 : MODBUS_READ_HOLDING;
+    start_reg : UINT := 1;
+    qty : UINT := 10;
+  END_VAR
+  VAR
+    reg1 AT %QW0 : INT;
+    reg2 AT %QW1 : INT;
+    reg101 AT %QW101 : INT;
+    iw101 AT %IW101 : INT;
+    iw102 AT %IW102 : INT;
+    reg102 AT %QW102 : INT;
+    reg103 AT %QW103 : INT;
+    reg3 AT %QW2 : INT;
+    reg4 AT %QW3 : INT;
+    mod_con AT %QX0.0 : BOOL;
+    mod_con_ok AT %QX0.1 : BOOL;
+    mod_read_ok AT %QX0.2 : BOOL;
+  END_VAR
+  VAR
+    _TMP_ADD5336871_ENO : BOOL;
+    _TMP_ADD5336871_OUT : INT;
+    _TMP_SUB5411331_ENO : BOOL;
+    _TMP_SUB5411331_OUT : INT;
+  END_VAR
+
+  MODBUS_CONNECT0(CONNECT := NOT(mod_con_ok) AND mod_con, BROKER := ip, PORT := port, SLAVE_ID := slave);
+  mod_con_ok := MODBUS_CONNECT0.SUCCESS;
+  _TMP_ADD5336871_OUT := ADD(EN := TRUE, IN1 := reg1, IN2 := reg2, ENO => _TMP_ADD5336871_ENO);
+  IF _TMP_ADD5336871_ENO THEN
+      reg3 := _TMP_ADD5336871_OUT;
+  END_IF;
+  _TMP_SUB5411331_OUT := SUB(EN := _TMP_ADD5336871_ENO, IN1 := iw101, IN2 := iw102, ENO => _TMP_SUB5411331_ENO);
+  IF _TMP_SUB5411331_ENO THEN
+      reg101 := _TMP_SUB5411331_OUT;
+  END_IF;
+  MODBUS_READ_HOLDING0(EN := mod_con_ok, READ := mod_con, START_ADDRESS := start_reg, QUANTITY := qty);
+  IF MODBUS_READ_HOLDING0.ENO THEN
+      reg4 := MODBUS_READ_HOLDING0.VALUES;
+  END_IF;
+  IF MODBUS_READ_HOLDING0.ENO THEN
+      mod_read_ok := MODBUS_READ_HOLDING0.SUCCESS;
+  END_IF;
+END_PROGRAM
+
+
+CONFIGURATION Config0
+
+  RESOURCE Res0 ON PLC
+    TASK task0(INTERVAL := T#20ms,PRIORITY := 1);
+    PROGRAM instance0 WITH task0 : main;
+  END_RESOURCE
+END_CONFIGURATION

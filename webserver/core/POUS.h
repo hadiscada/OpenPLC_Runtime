@@ -4,18 +4,20 @@
 #include "accessor.h"
 #include "iec_std_lib.h"
 
-// PROGRAM PROG0
+// PROGRAM MAIN
 // Data part
 typedef struct {
   // PROGRAM Interface - IN, OUT, IN_OUT variables
 
   // PROGRAM private variables - TEMP, private and located variables
-  __DECLARE_VAR(BOOL,VAR_IN)
-  __DECLARE_VAR(BOOL,VAR_OUT)
+  __DECLARE_LOCATED(INT,REG1)
+  __DECLARE_LOCATED(INT,REG2)
+  __DECLARE_LOCATED(INT,REG3)
+  __DECLARE_VAR(INT,_TMP_ADD5467317_OUT)
 
-} PROG0;
+} MAIN;
 
-void PROG0_init__(PROG0 *data__, BOOL retain);
+void MAIN_init__(MAIN *data__, BOOL retain);
 // Code part
-void PROG0_body__(PROG0 *data__);
+void MAIN_body__(MAIN *data__);
 #endif //__POUS_H

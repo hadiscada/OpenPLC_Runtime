@@ -16,22 +16,22 @@ extern unsigned long long common_ticktime__;
 
 #include "POUS.c"
 
-BOOL MAIN;
-PROG0 RES0__INST0;
-#define INST0 RES0__INST0
+BOOL TASK0;
+MAIN RES0__INSTANCE0;
+#define INSTANCE0 RES0__INSTANCE0
 
 void RES0_init__(void) {
   BOOL retain;
   retain = 0;
   
-  MAIN = __BOOL_LITERAL(FALSE);
-  PROG0_init__(&INST0,retain);
+  TASK0 = __BOOL_LITERAL(FALSE);
+  MAIN_init__(&INSTANCE0,retain);
 }
 
 void RES0_run__(unsigned long tick) {
-  MAIN = !(tick % 1);
-  if (MAIN) {
-    PROG0_body__(&INST0);
+  TASK0 = !(tick % 1);
+  if (TASK0) {
+    MAIN_body__(&INSTANCE0);
   }
 }
 

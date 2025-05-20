@@ -1,0 +1,134 @@
+(* 
+ *  This file is part of OpenPLC - an open source Programmable
+ *  Logic Controller compliant with IEC 61131-3
+ *
+ *  Copyright (C) 2025 Autonomy Logic
+ *
+ * See COPYING and COPYING.LESSER files for copyright details.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ * This code is made available on the understanding that it will not be
+ * used in safety-critical situations without a full and competent review.
+ *)
+
+(*
+ * An IEC 61131-3 compiler.
+ *
+ * Based on the
+ * FINAL DRAFT - IEC 61131-3, 2nd Ed. (2001-12-10)
+ *
+ *)
+
+(*
+ * This is a dummy implementation of those blocks since
+ * its code is actually written in C, not ST
+ *)
+
+(*
+ * S7_CONNECT
+ * -------------
+ *)
+FUNCTION_BLOCK S7_CONNECT
+  VAR_INPUT
+    CONNECT    : BOOL;
+    IP_ADDRESS : STRING;
+    RACK       : INT;
+    SLOT       : INT;
+  END_VAR
+  VAR_OUTPUT
+    SUCCESS    : BOOL;
+    ERROR_CODE : INT;
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+(*
+ * S7_DISCONNECT
+ * -------------
+ *)
+FUNCTION_BLOCK S7_DISCONNECT
+  VAR_INPUT
+    DISCONNECT : BOOL;
+  END_VAR
+  VAR_OUTPUT
+    SUCCESS    : BOOL;
+    ERROR_CODE : INT;
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+(*
+ * S7_READ_BIT
+ * -------------
+ * Read a single BOOL (bit) from a Data Block
+ *)
+FUNCTION_BLOCK S7_READ_BIT
+  VAR_INPUT
+    READ       : BOOL;      (* Trigger to read *)
+    DB_NUMBER  : INT;       (* DB number *)
+    ADDRESS    : INT;       (* Start address *)
+    BIT_OFFSET : INT;       (* Bit offset, 0 to 7 *)
+  END_VAR
+  VAR_OUTPUT
+    VALUE      : BOOL;      (* Read value *)
+    SUCCESS    : BOOL;      (* Operation success *)
+    ERROR_CODE : INT;       (* Error code *)
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+(*
+ * S7_READ_BYTE
+ * -------------
+ * Read a single BYTE from a Data Block
+ *)
+FUNCTION_BLOCK S7_READ_BYTE
+  VAR_INPUT
+    READ       : BOOL;      (* Trigger to read *)
+    DB_NUMBER  : INT;       (* DB number *)
+    ADDRESS    : INT;       (* Start address *)
+  END_VAR
+  VAR_OUTPUT
+    VALUE      : BYTE;      (* Read value *)
+    SUCCESS    : BOOL;      (* Operation success *)
+    ERROR_CODE : INT;       (* Error code *)
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+(*
+ * S7_READ_WORD
+ * -------------
+ * Read a single WORD from a Data Block
+ *)
+FUNCTION_BLOCK S7_READ_WORD
+  VAR_INPUT
+    READ       : BOOL;      (* Trigger to read *)
+    DB_NUMBER  : INT;       (* DB number *)
+    ADDRESS    : INT;       (* Start address *)
+  END_VAR
+  VAR_OUTPUT
+    VALUE      : WORD;      (* Read value *)
+    SUCCESS    : BOOL;      (* Operation success *)
+    ERROR_CODE : INT;       (* Error code *)
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK

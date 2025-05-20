@@ -1,0 +1,157 @@
+(* 
+ *  This file is part of OpenPLC - an open source Programmable
+ *  Logic Controller compliant with IEC 61131-3
+ *
+ *  Copyright (C) 2025 Autonomy Logic
+ *
+ * See COPYING and COPYING.LESSER files for copyright details.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ * This code is made available on the understanding that it will not be
+ * used in safety-critical situations without a full and competent review.
+ *)
+
+
+(*
+ * An IEC 61131-3 compiler.
+ *
+ * Based on the
+ * FINAL DRAFT - IEC 61131-3, 2nd Ed. (2001-12-10)
+ *
+ *)
+
+
+(*
+ * This is a dummy implementation of those blocks since
+ * its code is actually written in C, not ST
+ *)
+
+
+(*
+ * MODBUS_CONNECT
+ * -------------
+ *)
+FUNCTION_BLOCK MODBUS_CONNECT
+  VAR_INPUT
+    CONNECT    : BOOL;
+    BROKER     : STRING;
+    PORT       : UINT;
+    SLAVE_ID   : UINT;
+  END_VAR
+  VAR_OUTPUT
+    SUCCESS    : BOOL;
+    ERROR_CODE : INT;
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+
+(*
+ * MODBUS_DISCONNECT
+ * -------------
+ *)
+FUNCTION_BLOCK MODBUS_DISCONNECT
+  VAR_INPUT
+    DISCONNECT : BOOL;
+  END_VAR
+  VAR_OUTPUT
+    SUCCESS    : BOOL;
+    ERROR_CODE : INT;
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+
+(*
+ * MODBUS_READ_HOLDING
+ * -------------
+ *)
+FUNCTION_BLOCK MODBUS_READ_HOLDING
+  VAR_INPUT
+    READ          : BOOL;
+    START_ADDRESS : UINT;
+    QUANTITY      : UINT;
+  END_VAR
+  VAR_OUTPUT
+    VALUES        : INT;
+    SUCCESS       : BOOL;
+    ERROR_CODE    : INT;
+  END_VAR
+  VALUES := 0;
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+
+(*
+ * MODBUS_WRITE_REGISTER
+ * -------------
+ *)
+FUNCTION_BLOCK MODBUS_WRITE_REGISTER
+  VAR_INPUT
+    WRITE   : BOOL;
+    ADDRESS : UINT;
+    VALUE   : INT;
+  END_VAR
+  VAR_OUTPUT
+    SUCCESS    : BOOL;
+    ERROR_CODE : INT;
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+
+(*
+ * MODBUS_READ_COILS
+ * -------------
+ *)
+FUNCTION_BLOCK MODBUS_READ_COILS
+  VAR_INPUT
+    READ          : BOOL;
+    START_ADDRESS : UINT;
+    QUANTITY      : UINT;
+  END_VAR
+  VAR_OUTPUT
+    VALUES        : BOOL;
+    SUCCESS       : BOOL;
+    ERROR_CODE    : INT;
+  END_VAR
+  VALUES := 0;
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK
+
+
+(*
+ * MODBUS_WRITE_COIL
+ * -------------
+ *)
+FUNCTION_BLOCK MODBUS_WRITE_COIL
+  VAR_INPUT
+    WRITE   : BOOL;
+    ADDRESS : UINT;
+    VALUE   : BOOL;
+  END_VAR
+  VAR_OUTPUT
+    SUCCESS    : BOOL;
+    ERROR_CODE : INT;
+  END_VAR
+  SUCCESS := 0;
+  ERROR_CODE := 0;
+END_FUNCTION_BLOCK

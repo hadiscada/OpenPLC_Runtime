@@ -1,0 +1,26 @@
+2025-05-14 10:02:27,022 - INFO - 192.168.2.27 - - [14/May/2025 10:02:27] "OPTIONS /api/login HTTP/1.1" 200 -
+2025-05-14 10:02:27,028 - INFO - 192.168.2.27 - - [14/May/2025 10:02:27] "POST /api/login HTTP/1.1" 200 -
+2025-05-14 10:02:35,819 - INFO - 192.168.2.27 - - [14/May/2025 10:02:35] "OPTIONS /api/generate-key HTTP/1.1" 200 -
+2025-05-14 10:02:35,825 - INFO - 192.168.2.27 - - [14/May/2025 10:02:35] "POST /api/generate-key HTTP/1.1" 200 -
+2025-05-14 10:20:08,543 - INFO -  * Detected change in '/root/OpenPLC_v3/webserver/webserver.py', reloading
+2025-05-14 10:20:08,645 - INFO -  * Restarting with stat
+2025-05-14 10:20:08,845 - INFO - Starting OpenPLC Runtime webserver - webserver.py loaded
+2025-05-14 10:20:08,861 - WARNING -  * Debugger is active!
+2025-05-14 10:20:08,861 - INFO -  * Debugger PIN: 486-581-004
+2025-05-14 10:20:36,933 - INFO -  * Detected change in '/root/OpenPLC_v3/webserver/webserver.py', reloading
+2025-05-14 10:20:37,025 - INFO -  * Restarting with stat
+2025-05-14 10:20:37,228 - INFO - Starting OpenPLC Runtime webserver - webserver.py loaded
+2025-05-14 10:20:37,244 - WARNING -  * Debugger is active!
+2025-05-14 10:20:37,244 - INFO -  * Debugger PIN: 486-581-004
+2025-05-14 10:20:45,038 - INFO - Starting OpenPLC Runtime webserver - webserver.py loaded
+2025-05-14 10:20:45,057 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.1.15:8080
+2025-05-14 10:20:45,057 - INFO - [33mPress CTRL+C to quit[0m
+2025-05-14 10:20:45,058 - INFO -  * Restarting with stat
+2025-05-14 10:20:45,267 - INFO - Starting OpenPLC Runtime webserver - webserver.py loaded
+2025-05-14 10:20:45,283 - WARNING -  * Debugger is active!
+2025-05-14 10:20:45,284 - INFO -  * Debugger PIN: 486-581-004
+2025-05-14 10:53:53,855 - INFO -  * Detected change in '/root/OpenPLC_v3/webserver/webserver.py', reloading
+2025-05-14 10:53:53,954 - INFO -  * Restarting with stat
